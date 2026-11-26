@@ -1,0 +1,49 @@
+import { Locator, Page, expect } from '@playwright/test';
+import { BasePage } from './BasePage';
+export class ProductPage extends BasePage {
+  readonly productTitle: Locator;
+  readonly addToCartButton: Locator;
+  readonly priceTag: Locator;
+  constructor(page: Page) {
+    super(page);
+    this.productTitle = page.getByRole('heading').first();
+    this.addToCartButton = page.getByRole('button', { name: /add to cart/i });
+    this.priceTag = page.getByTestId('product-price');
+  }
+  async openProductFromStore(productName: string): Promise<void> {
+    await this.navigateTo('/vn/store');
+    const productLink = this.page.getByRole('link', {
+      name: new
+        RegExp(productName, 'i')
+    }).first();
+    await expect(productLink).toBeVisible({ timeout: 20000 });
+    await productLink.click();
+    await expect(this.page).toHaveURL(/.*products/, { timeout: 30000 });
+  }
+  async selectSize(size: string): Promise<void> {
+    const sizeBtn = this.page.getByRole('button', { name: size, exact: true });
+    await expect(sizeBtn).toBeVisible({ timeout: 10000 });
+    await sizeBtn.click();
+  }
+  async selectColor(color: string): Promise<void> {
+    const colorBtn = this.page.getByRole('button', { name: color, exact: true });
+    await expect(colorBtn).toBeVisible({ timeout: 10000 });
+    await colorBtn.click();
+  }
+  async addToCart(): Promise<void> {
+    await expect(this.addToCartButton).toHaveText(/add to cart/i, {
+      timeout: 15000
+    });
+    await expect(this.addToCartButton).toBeEnabled({ timeout: 15000 });
+    await this.addToCartButton.click();
+    // Wait for the cart to update (1); if Render Cloud responds slowly on the first click, click again once
+    const cartOne = this.page.getByText(/cart\s*\(1\)/i).first();
+    try {
+      await expect(cartOne).toBeVisible({ timeout: 15000 });
+    } catch {
+      if (await this.addToCartButton.isEnabled()) {
+        await this.addToCartButton.click();
+      }
+    }
+  }
+}
